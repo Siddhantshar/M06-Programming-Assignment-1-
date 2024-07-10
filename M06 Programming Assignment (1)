@@ -1,0 +1,169 @@
+// Import required packages
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import javafx.application.Application;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+
+public class Exercise34_01 extends Application {
+
+    // Create buttons
+    private Button v = new Button("View");
+    private Button i = new Button("Insert");
+    private Button u = new Button("Update");
+    private Button c = new Button("Clear");
+
+    // Create text fields
+    private TextField id = new TextField();
+    private TextField lname = new TextField();
+    private TextField fname = new TextField();
+    private TextField mi = new TextField();
+    private TextField addr = new TextField();
+    private TextField city = new TextField();
+    private TextField state = new TextField();
+    private TextField telephone = new TextField();
+
+    // Create a label for status
+    private Label lstatus = new Label();
+
+    // Declare a statement
+    private Statement st;
+
+    @Override
+    public void start(Stage primaryStage) {
+        // Create VBox for layout
+        VBox vBox = new VBox(5);
+
+        // Create and add HBoxes with labels and text fields to the VBox
+        vBox.getChildren().addAll(
+                createHBox("ID", id),
+                createHBox(new Label("Last Name"), lname, new Label("First Name"), fname, new Label("MI"), mi),
+                createHBox("Address", addr),
+                createHBox(new Label("City"), city, new Label("State"), state),
+                createHBox("Telephone", telephone)
+        );
+
+        // Set preferred column count for text fields
+        lname.setPrefColumnCount(8);
+        fname.setPrefColumnCount(8);
+        mi.setPrefColumnCount(1);
+
+        // Create HBox for buttons and set alignment
+        HBox buttonBox = new HBox(5, v, i, u, c);
+        buttonBox.setAlignment(Pos.CENTER);
+
+        // Create BorderPane and set components
+        BorderPane borderPane = new BorderPane();
+        borderPane.setCenter(vBox);
+        borderPane.setTop(lstatus);
+        borderPane.setBottom(buttonBox);
+
+        // Create scene, set title and display
+        Scene scene = new Scene(borderPane, 400, 200);
+        primaryStage.setTitle("ExtraExercise34_01");
+        primaryStage.setScene(scene);
+        primaryStage.show();
+
+        // Initialize database connection and set button actions
+        initialize_DB();
+        v.setOnAction(e -> view());
+        i.setOnAction(e -> insert());
+        u.setOnAction(e -> update());
+        c.setOnAction(e -> clear());
+    }
+
+    // Helper method to create HBox with label and text field
+    private HBox createHBox(String labelText, TextField textField) {
+        return new HBox(5, new Label(labelText), textField);
+    }
+
+    // Helper method to create HBox with multiple components
+    private HBox createHBox(Label... components) {
+        return new HBox(5, components);
+    }
+
+    private void initialize_DB() {
+        try {
+            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost/javabook", "scott", "tiger");
+            lstatus.setText("Database connected");
+            st = connection.createStatement();
+        } catch (Exception ex) {
+            lstatus.setText("Connection failed: " + ex);
+        }
+    }
+
+    private void view() {
+        String query = "SELECT * FROM Staff WHERE ID = '" + id.getText().trim() + "'";
+        try {
+            ResultSet resultSet = st.executeQuery(query);
+            load(resultSet);
+        } catch (SQLException ex) {
+            lstatus.setText("Select failed: " + ex);
+        }
+    }
+
+    private void load(ResultSet resultSet) throws SQLException {
+        if (resultSet.next()) {
+            lname.setText(resultSet.getString(2));
+            fname.setText(resultSet.getString(3));
+            mi.setText(resultSet.getString(4));
+            addr.setText(resultSet.getString(5));
+            city.setText(resultSet.getString(6));
+            state.setText(resultSet.getString(7));
+            telephone.setText(resultSet.getString(8));
+            lstatus.setText("Record found");
+        } else {
+            lstatus.setText("Record not found");
+        }
+    }
+
+    private void insert() {
+        String insertQuery = "INSERT INTO Staff(ID, LastName, FirstName, mi, Address, City, State, Telephone) VALUES('" +
+                id.getText().trim() + "','" + lname.getText().trim() + "','" + fname.getText().trim() + "','" + mi.getText().trim() + "','" +
+                addr.getText().trim() + "','" + city.getText().trim() + "','" + state.getText().trim() + "','" + telephone.getText().trim() + "')";
+        try {
+            st.executeUpdate(insertQuery);
+            lstatus.setText("Record inserted");
+        } catch (SQLException ex) {
+            lstatus.setText("Insertion failed: " + ex);
+        }
+    }
+
+    private void update() {
+        String updateQuery = "UPDATE Staff SET LastName = '" + lname.getText().trim() + "', FirstName = '" + fname.getText().trim() + 
+                             "', mi = '" + mi.getText().trim() + "', Address = '" + addr.getText().trim() + "', City = '" + city.getText().trim() + 
+                             "', State = '" + state.getText().trim() + "', Telephone = '" + telephone.getText().trim() + 
+                             "' WHERE ID = '" + id.getText().trim() + "'";
+        try {
+            st.executeUpdate(updateQuery);
+            lstatus.setText("Record updated");
+        } catch (SQLException ex) {
+            lstatus.setText("Update failed: " + ex);
+        }
+    }
+
+    private void clear() {
+        id.setText(null);
+        lname.setText(null);
+        fname.setText(null);
+        mi.setText(null);
+        addr.setText(null);
+        city.setText(null);
+        state.setText(null);
+        telephone.setText(null);
+    }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+}
