@@ -1,0 +1,105 @@
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.stage.Stage;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
+
+public class Example extends Application {
+
+    private Connection connection;
+    private Label lConnectionStatus = new Label("No connection now");
+    private TextArea taUpdateDisplay = new TextArea();
+
+    @Override
+    public void start(Stage primaryStage) {
+        Button bt1BatchUpdate = new Button("Batch Update");
+        Button bt2NonBatchUpdate = new Button("Non-Batch Update");
+        Button bt3ConnectDB = new Button("Connect to Database");
+
+        HBox hBox = new HBox(10, bt1BatchUpdate, bt2NonBatchUpdate);
+        hBox.setAlignment(Pos.CENTER);
+
+        BorderPane mainPane = new BorderPane();
+        mainPane.setTop(new BorderPane(lConnectionStatus, null, bt3ConnectDB, null, null));
+        mainPane.setCenter(taUpdateDisplay);
+        mainPane.setBottom(hBox);
+
+        Scene scene = new Scene(mainPane, 400, 300);
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("Database Update Example");
+        primaryStage.show();
+
+        bt3ConnectDB.setOnAction(e -> connectToDatabase());
+        bt1BatchUpdate.setOnAction(e -> {
+            if (connection == null) {
+                taUpdateDisplay.setText("Please connect to the database first");
+                return;
+            }
+            new Thread(this::batchUpdate).start();
+        });
+
+        bt2NonBatchUpdate.setOnAction(e -> {
+            if (connection == null) {
+                taUpdateDisplay.setText("Please connect to the database first");
+                return;
+            }
+            new Thread(this::nonBatchUpdate).start();
+        });
+    }
+
+    private void connectToDatabase() {
+        try {
+            connection = DriverManager.getConnection("jdbc:mysql://localhost/javabook", "username", "password");
+            lConnectionStatus.setText("Connected to database");
+        } catch (Exception e) {
+            lConnectionStatus.setText("Failed to connect to database");
+            e.printStackTrace();
+        }
+    }
+
+    private void batchUpdate() {
+        try (Statement stmt = connection.createStatement()) {
+            stmt.executeUpdate("DROP TABLE IF EXISTS Temp");
+            stmt.executeUpdate("CREATE TABLE Temp(NUM1 DOUBLE, NUM2 DOUBLE, NUM3 DOUBLE)");
+
+            long startTime = System.currentTimeMillis();
+            for (int i = 1; i <= 5000; i++) {
+                stmt.addBatch("INSERT INTO Temp VALUES(" + Math.random() * 1000 + ", " + Math.random() * 1000 + ", " + Math.random() + ")");
+            }
+            stmt.executeBatch();
+            long endTime = System.currentTimeMillis();
+
+            Platform.runLater(() -> taUpdateDisplay.setText("Batch update completed in " + (endTime - startTime) + " ms"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void nonBatchUpdate() {
+        try (Statement stmt = connection.createStatement()) {
+            stmt.executeUpdate("DROP TABLE IF EXISTS Temp");
+            stmt.executeUpdate("CREATE TABLE Temp(NUM1 DOUBLE, NUM2 DOUBLE, NUM3 DOUBLE)");
+
+            long startTime = System.currentTimeMillis();
+            for (int i = 1; i <= 5000; i++) {
+                stmt.executeUpdate("INSERT INTO Temp VALUES(" + Math.random() * 1000 + ", " + Math.random() * 1000 + ", " + Math.random() + ")");
+            }
+            long endTime = System.currentTimeMillis();
+
+            Platform.runLater(() -> taUpdateDisplay.setText("Non-batch update completed in " + (endTime - startTime) + " ms"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+}
